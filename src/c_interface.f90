@@ -647,6 +647,9 @@ contains
         type(solver_settings_type_c), intent(out) :: settings_c
         type(solver_settings_type), intent(in) :: settings
 
+        character(c_char), allocatable :: tmp_c(:)
+        integer :: n_copy
+
         if (settings%initialized) then
             ! callback functions cannot be converted
             settings_c%precond = c_null_funptr
@@ -674,8 +677,13 @@ contains
             settings_c%seed = int(settings%seed, kind=c_ip)
             settings_c%verbose = int(settings%verbose, kind=c_ip)
 
-            ! convert characters
-            settings_c%subsystem_solver = character_to_c(settings%subsystem_solver)
+            ! convert characters and adapt to fixed-length string in settings_c
+            tmp_c = character_to_c(settings%subsystem_solver)
+            n_copy = min(size(tmp_c), size(settings_c%subsystem_solver))
+            settings_c%subsystem_solver(1:n_copy) = tmp_c(1:n_copy)
+            if (n_copy < size(settings_c%subsystem_solver)) then
+                settings_c%subsystem_solver(n_copy + 1 : size(settings_c%subsystem_solver)) = c_null_char
+            end if
 
             ! set settings to initialized
             settings_c%initialized = .true._c_bool
